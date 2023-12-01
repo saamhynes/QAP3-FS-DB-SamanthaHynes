@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Product Management - Products</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+  </head>
+  <body>
+    <h1>Product List</h1>
+
+    <% if (products.length > 0) { %>
+    <ul id="productList">
+      <% products.forEach(product => { %>
+      <li id="product_<%= product.id %>">
+        <span class="productName"><%= product.name %></span>
+        <form
+          action="/products/edit/<%= product.id %>"
+          method="GET"
+          style="display: inline"
+          class="edit-product-form"
+        >
+          <button type="submit">Edit</button>
+        </form>
+        <form
+          action="/products/delete/<%= product.id %>"
+          method="POST"
+          style="display: inline"
+          class="delete-product-form"
+        >
+          <button type="submit">Delete</button>
+        </form>
+        <form
+          class="update-product-form"
+          style="display: none"
+          data-product-id="<%= product.id %>"
+        >
+          <input
+            type="text"
+            class="edit-product-input"
+            value="<%= product.name %>"
+          />
+          <button type="submit">Update</button>
+          <button type="button" class="cancel-edit">Cancel</button>
+        </form>
+      </li>
+      <% }); %>
+    </ul>
+    <% } else { %>
+    <p>No products available.</p>
+    <% } %>
+
+    <h2>Add New Product</h2>
+    <form id="newProductForm">
+      <label for="productName">Product Name:</label>
+      <input type="text" id="productName" name="name" required />
+      <button type="submit">Add Product</button>
+    </form>
+
+    <script>
+      $(document).ready(function () {
+        // Functionality for editing existing products
+        $(".edit-product-form").submit(function (e) {
+          e.preventDefault();
+
+          const form = $(this);
+          const listItem = form.closest("li");
+          const productId = form.attr("action").split("/").pop();
+          const editedName = form
+            .siblings(".update-product-form")
+            .find(".edit-product-input")
+            .val();
+
+          $.ajax({
+            url: `/products/edit/${productId}`,
+            type: "PUT",
+            data: { name: editedName },
+            success: function (data) {
+              listItem.find(".productName").text(editedName);
+              listItem.find(".productName").toggle();
+              listItem.find(".update-product-form").toggle();
+            },
+            error: function (err) {
+              console.error("Error updating product:", err);
+            },
+          });
+        });
+
+        $(".cancel-edit").click(function (e) {
+          e.preventDefault();
+          const form = $(this).closest(".update-product-form");
+          const listItem = form.closest("li");
+          listItem.find(".productName").toggle();
+          listItem.find(".update-product-form").toggle();
+        });
+
+        $(document).on("submit", ".update-product-form", function (e) {
+          e.preventDefault();
+          const form = $(this);
+          const productId = form.data("product-id");
+          const editedName = form.find(".edit-product-input").val();
+
+          $.ajax({
+            url: `/products/edit/${productId}`,
+            type: "PUT",
+            data: { name: editedName },
+            success: function (data) {
+              const updatedProduct = data.product;
+              const listItem = form.closest("li");
+              listItem.find(".productName").text(updatedProduct.name);
+              listItem.find(".productName").toggle();
+              listItem.find(".update-product-form").toggle();
+            },
+            error: function (err) {
+              console.error("Error updating product:", err);
+            },
+          });
+        });
+
+        $(document).on("submit", ".delete-product-form", function (e) {
+          e.preventDefault();
+          const form = $(this);
+          const id = form.attr("action").split("/").pop();
+
+          $.ajax({
+            url: "/products/" + id,
+            type: "DELETE",
+            success: function (result) {
+              form.closest("li").remove();
+            },
+            error: function (err) {
+              console.error("Error deleting product:", err);
+            },
+          });
+        });
+
+        $("#newProductForm").submit(function (e) {
+          e.preventDefault();
+          var productName = $("#productName").val();
+          $.ajax({
+            url: "/products",
+            type: "POST",
+            data: { name: productName },
+            success: function (result) {
+              const newProductHTML =
+                '<li id="product_' +
+                result.id +
+                '">' +
+                '<span class="productName">' +
+                productName +
+                "</span>" +
+                '<form action="/products/edit/' +
+                result.id +
+                '" method="GET" style="display: inline" class="edit-product-form">' +
+                '<button type="submit">Edit</button>' +
+                "</form>" +
+                '<form action="/products/delete/' +
+                result.id +
+                '" method="POST" style="display: inline" class="delete-product-form">' +
+                '<button type="submit">Delete</button>' +
+                "</form>" +
+                '<form class="update-product-form" style="display: none" data-product-id="' +
+                result.id +
+                '">' +
+                '<input type="text" class="edit-product-input" value="' +
+                productName +
+                '" />' +
+                '<button type="submit">Update</button>' +
+                '<button type="button" class="cancel-edit">Cancel</button>' +
+                "</form>" +
+                "</li>";
+
+              $("#productList").append(newProductHTML);
+              $("#productName").val("");
+
+              bindEditFunctionality(result.id);
+            },
+            error: function (err) {
+              console.error("Error adding product:", err);
+            },
+          });
+        });
+
+        function bindEditFunctionality(productId) {
+          // Binding logic for editing newly added products
+          $(`#product_${productId} .edit-product-form`).submit(function (e) {
+            e.preventDefault();
+            const form = $(this);
+            const id = form.attr("action").split("/").pop();
+
+            const editedName = form
+              .siblings(".update-product-form")
+              .find(".edit-product-input")
+              .val();
+
+            $.ajax({
+              url: `/products/edit/${id}`,
+              type: "PUT",
+              data: { name: editedName },
+              success: function (data) {
+                const updatedProduct = data.product;
+                const listItem = form.closest("li");
+                listItem.find(".productName").text(updatedProduct.name);
+                listItem.find(".productName").toggle();
+                listItem.find(".update-product-form").toggle();
+              },
+              error: function (err) {
+                console.error("Error updating product:", err);
+              },
+            });
+          });
+
+          $(`#product_${productId} .cancel-edit`).click(function (e) {
+            e.preventDefault();
+            const form = $(this).closest(".update-product-form");
+            const listItem = form.closest("li");
+            listItem.find(".productName").toggle();
+            listItem.find(".update-product-form").toggle();
+          });
+
+          $(document).on(
+            "submit",
+            `#product_${productId} .update-product-form`,
+            function (e) {
+              e.preventDefault();
+              const form = $(this);
+              const editedName = form.find(".edit-product-input").val();
+
+              $.ajax({
+                url: form.attr("action"),
+                type: "PUT",
+                data: { name: editedName },
+                success: function (data) {
+                  const updatedProduct = data.product;
+                  const listItem = form.closest("li");
+                  listItem.find(".productName").text(updatedProduct.name);
+                  listItem.find(".productName").toggle();
+                  listItem.find(".update-product-form").toggle();
+                },
+                error: function (err) {
+                  console.error("Error updating product:", err);
+                },
+              });
+            }
+          );
+        }
+      });
+    </script>
+  </body>
+</html>
