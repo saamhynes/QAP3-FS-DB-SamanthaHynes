@@ -1,6 +1,6 @@
 const express = require("express");
 const app = express();
-const port = 3000;
+const port = 4000;
 const { Pool } = require("pg");
 
 // postgres connection
@@ -118,8 +118,8 @@ app.patch("/products/edit/:id", async (req, res) => {
     console.error("Error updating product:", err);
     res.status(500).send("Internal Server Error");
   }
+});
 
-  app.listen(port, () => {
-    console.log(`Server is running on http://localhost:${port}`);
-  });
+app.listen(port, () => {
+  console.log(`Server is running on http://localhost:${port}`);
 });
