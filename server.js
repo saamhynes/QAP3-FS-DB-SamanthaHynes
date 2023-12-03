@@ -1,13 +1,16 @@
 const express = require("express");
 const app = express();
 const port = 3000;
+const { Pool } = require("pg");
 
-// Sample products data (for demonstration purposes)
-let products = [
-  { id: 1, name: "Product 1" },
-  { id: 2, name: "Product 2" },
-  { id: 3, name: "Product 3" },
-];
+// postgres connection
+const pool = new Pool({
+  user: "postgres",
+  host: "localhost",
+  database: "products_db",
+  password: "Keyin2021",
+  port: 5432,
+});
 
 // Body parser middleware
 app.use(express.urlencoded({ extended: true }));
@@ -17,8 +20,14 @@ app.set("views", "./views");
 app.set("view engine", "ejs");
 
 // Render the products page
-app.get("/products", (req, res) => {
-  res.render("products", { products });
+app.get("/products", async (req, res) => {
+  try {
+    const { rows } = await pool.query("SELECT * FROM products");
+    res.render("products", { products: rows });
+  } catch (err) {
+    console.error("Error fetching products:", err);
+    res.status(500).send("Internal Server Error");
+  }
 });
 
 // Display the form to add a new product
@@ -27,30 +36,45 @@ app.get("/products/new", (req, res) => {
 });
 
 // Add a new product
-app.post("/products", (req, res) => {
+app.post("/products", async (req, res) => {
   const { name } = req.body;
-  const id = products.length + 1; // Generate a simple ID (replace this with proper ID handling)
-
-  products.push({ id, name });
-  res.json({ id, name });
+  try {
+    const { rows } = await pool.query(
+      "INSERT INTO products(name) VALUES($1) RETURNING *",
+      [name]
+    );
+    res.json(rows[0]);
+  } catch (err) {
+    console.error("Error adding product:", err);
+    res.status(500).send("Internal Server Error");
+  }
 });
 
 // Delete a product by ID
-app.delete("/products/:id", (req, res) => {
+app.delete("/products/:id", async (req, res) => {
   const { id } = req.params;
-  products = products.filter((product) => product.id !== parseInt(id));
-  res.sendStatus(200);
+  try {
+    await pool.query("DELETE FROM products WHERE id = $1", [id]);
+    res.sendStatus(200);
+  } catch (err) {
+    console.error("Error deleting product:", err);
+    res.status(500).send("Internal Server Error");
+  }
 });
 
-// get request to render edit form
-app.get("/products/edit/:id", (req, res) => {
+// put request to render edit form
+app.put("/products/edit/:id", async (req, res) => {
   const { id } = req.params;
-  const product = products.find((prod) => prod.id === parseInt(id));
-
-  if (!product) {
-    res.status(404).send("Product not found");
-  } else {
-    res.status(200).json({ product });
+  const { name } = req.body;
+  try {
+    const { rows } = await pool.query(
+      "UPDATE products SET name = $1 WHERE id = $2 RETURNING *",
+      [name, id]
+    );
+    res.json({ product: rows[0] });
+  } catch (err) {
+    console.error("Error updating product:", err);
+    res.status(500).send("Internal Server Error");
   }
 });
 
@@ -69,6 +93,33 @@ app.put("/products/edit/:id", (req, res) => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
+// patch request to handle specific product updates
+app.patch("/products/edit/:id", async (req, res) => {
+  const { id } = req.params;
+  const updates = req.body;
+
+  try {
+    const columns = Object.keys(updates);
+    const values = Object.values(updates);
+    const updateSet = columns
+      .map((col, index) => `${col} = $${index + 1}`)
+      .join(", ");
+
+    const query = {
+      text: `UPDATE products SET ${updateSet} WHERE id = $${
+        columns.length + 1
+      } RETURNING *`,
+      values: [...values, id],
+    };
+
+    const { rows } = await pool.query(query);
+    res.json({ product: rows[0] });
+  } catch (err) {
+    console.error("Error updating product:", err);
+    res.status(500).send("Internal Server Error");
+  }
+
+  app.listen(port, () => {
+    console.log(`Server is running on http://localhost:${port}`);
+  });
 });

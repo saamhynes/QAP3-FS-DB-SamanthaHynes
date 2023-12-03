@@ -39,7 +39,19 @@
             class="edit-product-input"
             value="<%= product.name %>"
           />
-          <button type="submit">Update</button>
+          <form
+            action="/products/update/<%= product.id %>"
+            method="POST"
+            style="display: inline"
+            class="patch-product-form"
+          >
+            <input
+              type="text"
+              class="edit-product-input"
+              value="<%= product.name %>"
+            />
+            <button type="submit">Update</button>
+          </form>
           <button type="button" class="cancel-edit">Cancel</button>
         </form>
       </li>
@@ -136,6 +148,7 @@
         $("#newProductForm").submit(function (e) {
           e.preventDefault();
           var productName = $("#productName").val();
+
           $.ajax({
             url: "/products",
             type: "POST",
@@ -146,7 +159,7 @@
                 result.id +
                 '">' +
                 '<span class="productName">' +
-                productName +
+                result.name +
                 "</span>" +
                 '<form action="/products/edit/' +
                 result.id +
@@ -162,7 +175,7 @@
                 result.id +
                 '">' +
                 '<input type="text" class="edit-product-input" value="' +
-                productName +
+                result.name +
                 '" />' +
                 '<button type="submit">Update</button>' +
                 '<button type="button" class="cancel-edit">Cancel</button>' +
@@ -174,6 +187,7 @@
 
               bindEditFunctionality(result.id);
             },
+
             error: function (err) {
               console.error("Error adding product:", err);
             },
