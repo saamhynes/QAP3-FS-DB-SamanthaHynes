@@ -87,6 +87,24 @@
           });
         }
 
+
+        // Function to delete a product
+        function deleteProduct(productId) {
+          $.ajax({
+            url: `/products/${productId}`,
+            type: "DELETE",
+            success: function () {
+              // Remove the deleted product from the UI
+              $(`#product_${productId}`).remove();
+            },
+            error: function (err) {
+              console.error("Error deleting product:", err);
+              // Handle error, if necessary
+            },
+          });
+        }
+
+
         // Event listener for save button on edit
         $(document).on("click", ".save-product", function (e) {
           e.preventDefault();
@@ -118,6 +136,14 @@
           listItem.find(".edit-product").hide();
           listItem.find(".delete-product").hide();
         });
+
+        // Event listener for delete button
+        $(document).on("click", ".delete-product", function () {
+          const productId = $(this).data("id");
+          // Call the function to delete the product
+          deleteProduct(productId);
+        });
+
       });
     </script>
   </body>
