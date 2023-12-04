@@ -1,9 +1,9 @@
 const express = require("express");
 const app = express();
-const port = 4000;
+const port = 3000;
 const { Pool } = require("pg");
 
-// postgres connection
+// Create a connection pool to PostgreSQL
 const pool = new Pool({
   user: "postgres",
   host: "localhost",
@@ -12,14 +12,13 @@ const pool = new Pool({
   port: 5432,
 });
 
-// Body parser middleware
+// Middleware setup
 app.use(express.urlencoded({ extended: true }));
-
-// Set EJS as the view engine
+app.use(express.json());
 app.set("views", "./views");
 app.set("view engine", "ejs");
 
-// Render the products page
+// GET route to fetch all products
 app.get("/products", async (req, res) => {
   try {
     const { rows } = await pool.query("SELECT * FROM products");
@@ -30,12 +29,7 @@ app.get("/products", async (req, res) => {
   }
 });
 
-// Display the form to add a new product
-app.get("/products/new", (req, res) => {
-  res.render("new");
-});
-
-// Add a new product
+// POST route to add a new product
 app.post("/products", async (req, res) => {
   const { name } = req.body;
   try {
@@ -50,7 +44,29 @@ app.post("/products", async (req, res) => {
   }
 });
 
-// Delete a product by ID
+// PUT route to update an existing product
+app.put("/products/:id", async (req, res) => {
+  const { id } = req.params;
+  const { name } = req.body;
+
+  console.log(
+    `Received request to update product ID: ${id} with name: ${name}`
+  );
+
+  try {
+    const { rows } = await pool.query(
+      "UPDATE products SET name = $1 WHERE id = $2 RETURNING *",
+      [name, id]
+    );
+    console.log(`Product updated successfully:`, rows[0]);
+    res.json({ product: rows[0] });
+  } catch (err) {
+    console.error("Error updating product:", err);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
+// DELETE route to remove a product
 app.delete("/products/:id", async (req, res) => {
   const { id } = req.params;
   try {
@@ -62,64 +78,7 @@ app.delete("/products/:id", async (req, res) => {
   }
 });
 
-// put request to render edit form
-app.put("/products/edit/:id", async (req, res) => {
-  const { id } = req.params;
-  const { name } = req.body;
-  try {
-    const { rows } = await pool.query(
-      "UPDATE products SET name = $1 WHERE id = $2 RETURNING *",
-      [name, id]
-    );
-    res.json({ product: rows[0] });
-  } catch (err) {
-    console.error("Error updating product:", err);
-    res.status(500).send("Internal Server Error");
-  }
-});
-
-//put request to handle product update
-app.put("/products/edit/:id", (req, res) => {
-  const { id } = req.params;
-  const { name } = req.body;
-
-  const productIndex = products.findIndex((prod) => prod.id === parseInt(id));
-
-  if (productIndex === -1) {
-    res.status(404).send("Product not found");
-  } else {
-    products[productIndex].name = name;
-    res.status(200).json({ product: products[productIndex] });
-  }
-});
-
-// patch request to handle specific product updates
-app.patch("/products/edit/:id", async (req, res) => {
-  const { id } = req.params;
-  const updates = req.body;
-
-  try {
-    const columns = Object.keys(updates);
-    const values = Object.values(updates);
-    const updateSet = columns
-      .map((col, index) => `${col} = $${index + 1}`)
-      .join(", ");
-
-    const query = {
-      text: `UPDATE products SET ${updateSet} WHERE id = $${
-        columns.length + 1
-      } RETURNING *`,
-      values: [...values, id],
-    };
-
-    const { rows } = await pool.query(query);
-    res.json({ product: rows[0] });
-  } catch (err) {
-    console.error("Error updating product:", err);
-    res.status(500).send("Internal Server Error");
-  }
-});
-
+// Start the server
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
 });
