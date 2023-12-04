@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Product Management - Products</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+  </head>
+  <body>
+    <h1>Product List</h1>
+
+    <ul id="productList">
+      <% products.forEach(product => { %>
+      <li id="product_<%= product.id %>">
+        <span class="productName"><%= product.name %></span>
+        <button class="edit-product">Edit</button>
+        <input
+          type="text"
+          class="edit-product-input"
+          style="display: none"
+          value="<%= product.name %>"
+        />
+        <button class="save-product" style="display: none">Save</button>
+        <button class="delete-product" data-id="<%= product.id %>">
+          Delete
+        </button>
+      </li>
+      <% }); %>
+    </ul>
+
+    <h2>Add New Product</h2>
+    <form id="newProductForm">
+      <label for="productName">Product Name:</label>
+      <input type="text" id="productName" name="name" required />
+      <button type="submit">Add Product</button>
+    </form>
+
+    <script>
+      $(document).ready(function () {
+        // Function to handle updating an existing product
+        function updateProduct(productId, editedName) {
+          // Perform the AJAX PUT request to update the product
+          $.ajax({
+            url: `/products/${productId}`,
+            type: "PUT",
+            data: { name: editedName },
+            success: function (response) {
+              // Update UI elements with the new data
+              const listItem = $(`#product_${response.product.id}`);
+              listItem.find(".productName").text(response.product.name);
+              listItem.find(".edit-product-input").hide();
+              listItem.find(".save-product").hide();
+              listItem.find(".productName").show();
+              listItem.find(".edit-product").show();
+              listItem.find(".delete-product").show();
+            },
+            error: function (err) {
+              console.error("Error updating product:", err);
+              // Handle error, if necessary
+            },
+          });
+        }
+
+        // Function to add a new product
+        function addNewProduct(productName) {
+          // Perform the AJAX POST request to add the new product
+          $.ajax({
+            url: "/products",
+            type: "POST",
+            data: { name: productName },
+            success: function (result) {
+              // Update UI to display the newly added product
+              const newProductHTML = `
+              <li id="product_${result.id}">
+                <span class="productName">${result.name}</span>
+                <button class="edit-product">Edit</button>
+                <input type="text" class="edit-product-input" style="display: none;" value="${result.name}" />
+                <button class="save-product" style="display: none;">Save</button>
+                <button class="delete-product" data-id="${result.id}">Delete</button>
+              </li>`;
+              $("#productList").append(newProductHTML);
+              $("#productName").val(""); // Clear the input field after adding
+            },
+            error: function (err) {
+              console.error("Error adding product:", err);
+              // Handle error, if necessary
+            },
+          });
+        }
+
+        // Function to delete a product
+        function deleteProduct(productId) {
+          $.ajax({
+            url: `/products/${productId}`,
+            type: "DELETE",
+            success: function () {
+              // Remove the deleted product from the UI
+              $(`#product_${productId}`).remove();
+            },
+            error: function (err) {
+              console.error("Error deleting product:", err);
+              // Handle error, if necessary
+            },
+          });
+        }
+
+        // Event listener for save button on edit
+        $(document).on("click", ".save-product", function (e) {
+          e.preventDefault();
+          const listItem = $(this).closest("li");
+          const editedName = listItem.find(".edit-product-input").val();
+          const productId = listItem.attr("id").split("_").pop();
+
+          // Call the update function
+          updateProduct(productId, editedName);
+        });
+
+        // Event listener for form submission when adding a new product
+        $("#newProductForm").submit(function (e) {
+          e.preventDefault();
+          const productName = $("#productName").val();
+
+          // Call the function to add a new product
+          addNewProduct(productName);
+        });
+
+        // Trigger inline editing when Edit button is clicked
+        $(document).on("click", ".edit-product", function () {
+          const listItem = $(this).closest("li");
+          const productName = listItem.find(".productName").text();
+          listItem.find(".productName").hide();
+          listItem.find(".edit-product-input").val(productName);
+          listItem.find(".edit-product-input").show();
+          listItem.find(".save-product").show();
+          listItem.find(".edit-product").hide();
+          listItem.find(".delete-product").hide();
+        });
+
+        // Event listener for delete button
+        $(document).on("click", ".delete-product", function () {
+          const productId = $(this).data("id");
+          // Call the function to delete the product
+          deleteProduct(productId);
+        });
+      });
+    </script>
+  </body>
+</html>
