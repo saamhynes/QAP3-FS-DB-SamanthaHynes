@@ -31,11 +31,11 @@ app.get("/products", async (req, res) => {
 
 // POST route to add a new product
 app.post("/products", async (req, res) => {
-  const { name } = req.body;
+  const { name, description } = req.body;
   try {
     const { rows } = await pool.query(
-      "INSERT INTO products(name) VALUES($1) RETURNING *",
-      [name]
+      "INSERT INTO products(name, description) VALUES($1, $2) RETURNING *",
+      [name, description]
     );
     res.json(rows[0]);
   } catch (err) {
@@ -47,7 +47,7 @@ app.post("/products", async (req, res) => {
 // PUT route to update an existing product
 app.put("/products/:id", async (req, res) => {
   const { id } = req.params;
-  const { name } = req.body;
+  const { name, description } = req.body;
 
   console.log(
     `Received request to update product ID: ${id} with name: ${name}`
@@ -55,8 +55,8 @@ app.put("/products/:id", async (req, res) => {
 
   try {
     const { rows } = await pool.query(
-      "UPDATE products SET name = $1 WHERE id = $2 RETURNING *",
-      [name, id]
+      "UPDATE products SET name = $1, description = $2 WHERE id = $3 RETURNING *",
+      [name, description, id]
     );
     console.log(`Product updated successfully:`, rows[0]);
     res.json({ product: rows[0] });
@@ -74,6 +74,44 @@ app.delete("/products/:id", async (req, res) => {
     res.sendStatus(200);
   } catch (err) {
     console.error("Error deleting product:", err);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
+app.patch("/products/:id", async (req, res) => {
+  const { id } = req.params;
+  const { name, description } = req.body;
+
+  try {
+    const { rows } = await pool.query(
+      "UPDATE products SET name = $1, description = $2 WHERE id = $3 RETURNING *",
+      [name, description, id]
+    );
+    res.json({ product: rows[0] });
+  } catch {
+    err;
+  }
+  {
+    console.error("Error updating product:", err);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
+// PUT route to update an existing product including the decription
+app.put("/products/:id", async (req, res) => {
+  const { id } = req.params;
+  const { name, description } = req.body;
+
+  try {
+    const { rows } = await pool.query(
+      "UPDATE products SET name = $1, description = $2 WHERE id = $3 RETURNING *",
+      [name, description, id]
+    );
+
+    console.log(`Product updated successfully:`, rows[0]);
+    res.json({ product: rows[0] });
+  } catch (err) {
+    console.error("Error updating product:", err);
     res.status(500).send("Internal Server Error");
   }
 });
