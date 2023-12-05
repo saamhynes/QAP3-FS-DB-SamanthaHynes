@@ -12,7 +12,9 @@
       <% products.forEach(product => { %>
       <li id="product_<%= product.id %>">
         <span class="productName"><%= product.name %></span>
-        <span class="productDescription"><%= product.description %></span>
+        <span class="productDescription" style="font-style: italic"
+          ><%= product.description %></span
+        >
         <button class="edit-product">Edit</button>
 
         <input
